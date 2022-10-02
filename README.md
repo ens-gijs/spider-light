@@ -1,6 +1,8 @@
 # Spider Light
 An ESP8266 based lighting control for my jumping spiders.
 
+**PROJECT IS IN EARLY DEVELOPMENT**
+
 # Parts and Libraries
 
 ## Consumer Ready Components
@@ -16,7 +18,7 @@ An ESP8266 based lighting control for my jumping spiders.
 
 ## Addtional BOM Items
 * [N-ch MOSFET 2N7002WT1G](https://www.mouser.com/ProductDetail/onsemi/2N7002WT1G)
- * *Any small signal N-ch MOSFET with a Vgs-th between 1 & 2V with Vds >= 40V should work fine, but don't pick one with a Vgs-th below 1V.*
+  * *Any small signal N-ch MOSFET with a Vgs-th between 1 & 2V with Vds >= 40V should work fine, but don't pick one with a Vgs-th below 1V.*
 * 10k resistors (pull-down)
 * 1.2k resistors (gate drive)
 * Custom PCB *(future item)*
@@ -25,4 +27,4 @@ An ESP8266 based lighting control for my jumping spiders.
 ## Arduino Libraries
 * [ArduinoJson](https://arduinojson.org/?utm_source=meta&utm_medium=library.properties) by Benoit Blanchon
 * [OneBitDisplay](https://github.com/bitbank2/OneBitDisplay) by bitbank2
- * [BitBang_I2C](https://github.com/bitbank2/BitBang_I2C)
+  * [BitBang_I2C](https://github.com/bitbank2/BitBang_I2C)
