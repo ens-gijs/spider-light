@@ -231,7 +231,7 @@ class Schedule {
   }
   
   getScheduleEntryByUid(uid) {
-    for (let e of schedule.entries) {
+    for (let e of this.entries) {
       if (e._uid == uid) return e;
     }
     return null;
@@ -283,7 +283,7 @@ class Schedule {
         <td><button class="remove">X</button></td>
         <td><input class="time" type="time" value="${entry.time}"></td>
         <td><input class="color-temp" type="text" size=4  value="${entry.colorTemp}"><canvas width=16 height=16 class="swatch" style="background-color: #${colorTemperatureToRGB(entry.colorTemp).hex}"></canvas></td>
-        <td><input class="brightness" type="range" min=0 max=100 value=${entry.brightness}></td>
+        <td><input class="brightness" type="range" min=0 max=100 value=${entry.brightness} oninput="this.nextElementSibling.value = this.value"> <output>${entry.brightness}</output></td>
       </tr>`, '');
 	}
   
@@ -300,7 +300,7 @@ class ChannelConfig{
       <legend>Channel <span>${channelId}</span></legend>
       <div><label><input type="checkbox" name="enabled"> Enabled</label></div>
       <div><label><input type="checkbox" name="swapWarmCool"> Swap Warm & Cool Signals</label></div>
-      <div><label>Max Brightness <input type="range" name="brightness" min=0 max=100 oninput="this.nextElementSibling.value = this.value"> <output></output></label></div>`;
+      <div><label>Max Brightness <input class="brightness" type="range" name="brightness" min=0 max=100 oninput="this.nextElementSibling.value = this.value"> <output></output></label></div>`;
     this.$channelId = qs('legend span', this.$dom);
     this.$enabled = qs('input[name="enabled"]', this.$dom);
     this.$swapWarmCool = qs('input[name="swapWarmCool"]', this.$dom);
@@ -344,6 +344,21 @@ class SpiderLightConfig {
     this.channelA = null;
     this.channelB = null;
     this.schedule = null;
+    
+    this._$controls = newElement('div', {class: 'config-controls'});
+    this._$reload = newElement('button', {class: 'reload', innerText: 'Reload'});
+    this._$upload = newElement('button', {class: 'upload', innerText: 'Upload'});
+    this._$upload.onclick = () => this.upload();
+    this._$reload.onclick = () => this.reload();
+    this._$controls.append(this._$reload);
+    this._$controls.append(this._$upload);
+    
+    this._$generalSettings = newElement('fieldset', {class: 'general-settings'});
+    this._$generalSettings.innerHTML = `<legend>General Settings</legend>
+      <div><label>NTP Timezone <a href="https://remotemonitoringsystems.ca/time-zone-abbreviations.php" target="_blank">supported timezones</a> <input type="text" name="timezone"></label></div>
+      <div><label>Max Lumens at Color Temp <input type="text" name="max_lum_at_color_temp"></label></div>`;
+    this.$timezone = qs('input[name="timezone"]', this._$generalSettings);
+    this.$maxLumAtColorTemp = qs('input[name="max_lum_at_color_temp"]', this._$generalSettings);
   }
   
   async _getConfig() {
@@ -361,18 +376,27 @@ class SpiderLightConfig {
     this.channelA = null;
     this.channelB = null;
     this.schedule = null;
+    
     this._getConfig().then((data) => {
       this.$dom.innerHTML = '';
+      this.$timezone.value = data.timezone;
+      this.$maxLumAtColorTemp.value = data.max_lum_at_color_temp;
+      this.$dom.append(this._$generalSettings);
       this.channelA = new ChannelConfig(this.$dom, 'A', data.channel_a);
       this.channelB = new ChannelConfig(this.$dom, 'B', data.channel_b);
       this.schedule = new Schedule(this.$dom, data.schedule);
+      this.$dom.append(this._$controls);
     });
+  }
+  
+  upload() {
+    console.log("UPLOAD", this.toJson());
   }
   
   toJson() {
     return {
-      time_zone: "EST5EDT",
-      max_lum_at_color_temp: 5800,
+      time_zone: this.$timezone.value,
+      max_lum_at_color_temp: clamp(parseInt(this.$maxLumAtColorTemp.value, 10), 2700, 6500),
       channel_a: this.channelA.toJson(),
       channel_b: this.channelB.toJson(),
       schedule: this.schedule.toJson()

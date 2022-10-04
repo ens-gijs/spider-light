@@ -5,20 +5,10 @@
   <script src="spider-light-lib.js"></script>
 </head>
 <body>
-  <h1>Spider Light</h1>
   <div id="config"></div>
   <script>
     let spiderLightConfig = new SpiderLightConfig(qs('#config'));
-    spiderLightConfig.reload()
-//    let channelA = null;
-//    let channelB = null;
-//    let schedule = null;
-//    getConfig().then((data) => {
-//      let $config = document.querySelector('#config');
-//      channelA = new ChannelConfig($config, 'A', data.channel_a);
-//      channelB = new ChannelConfig($config, 'B', data.channel_b);
-//      schedule = new Schedule($config, data.schedule);
-//    });
+    spiderLightConfig.reload();
   </script>
 </body>
 </html>

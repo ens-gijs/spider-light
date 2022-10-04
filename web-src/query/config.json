@@ -1,5 +1,5 @@
 {
-  "time_zone": "EST5EDT",
+  "timezone": "EST5EDT",
   "max_lum_at_color_temp": 5800,
   "schedule": [
     [450, 2700, 0],
