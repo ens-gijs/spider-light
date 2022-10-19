@@ -1,0 +1,24 @@
+{
+  "timezone": "EST5EDT",
+  "channel_a": {
+    "enabled": true,
+    "max_brightness": 100,
+    "swap_warm_cool_sig": false,
+    "warm_temp": 2700,
+    "cool_temp": 6500
+  },
+  "channel_b": {
+    "enabled": true,
+    "max_brightness": 35,
+    "swap_warm_cool_sig": false
+  },
+  "schedule": [
+    [450,2700,0],
+    [480,3500,80],
+    [720,5800,100],
+    [780,5800,100],
+    [1020,4800,90],
+    [1140,4800,70],
+    [1170,2700,0]
+  ]
+}

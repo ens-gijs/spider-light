@@ -1,3 +1,6 @@
+#ifndef _SPIDER_LIGHT_LIB_JS_H
+#define _SPIDER_LIGHT_LIB_JS_H
+const char SPIDER_LIGHT_LIB_JS[] PROGMEM = R"====(
 "use strict";
 let nextUid = 0;
 const KEY_UP_ARROW = 38;
@@ -439,3 +442,5 @@ class SpiderLightConfig {
     };
   }
 }  // SpiderLightConfig
+)====";
+#endif

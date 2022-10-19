@@ -1,3 +1,6 @@
+#ifndef _SPIDER_LIGHT_CSS_H
+#define _SPIDER_LIGHT_CSS_H
+const char SPIDER_LIGHT_CSS[] PROGMEM = R"====(
 body {
   font-family: Tahoma, Verdana, sans-serif;
   display: flex;
@@ -84,3 +87,5 @@ table tbody tr:last-of-type {
   display: inline-block;
   text-align: right;
 }
+)====";
+#endif

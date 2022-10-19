@@ -1,3 +1,6 @@
+#ifndef _INDEX_HTML_H
+#define _INDEX_HTML_H
+const char INDEX_HTML[] PROGMEM = R"====(
 <html>
 <head>
   <title>Spider Light</title>
@@ -12,3 +15,5 @@
   </script>
 </body>
 </html>
+)====";
+#endif
