@@ -9,6 +9,8 @@
 #include <WiFiClient.h>
 #include <OneBitDisplay.h>  // https://github.com/bitbank2/OneBitDisplay/wiki/API-and-constants
 #include <Time.h>
+#include <Wire.h>
+#include "I2C_eeprom.h"
 #include "NtpTime.h"
 #include "WifiConfig.h"
 #include "LightingConfig.h"
@@ -24,11 +26,13 @@
 #define LED_A2 D8
 
 
-
+I2C_eeprom eeprom(0x50, I2C_DEVICESIZE_24LC04 /* 512 bytes */);
 ESP8266WebServer server(80);
 OBDISP obd;
 uint8_t obdBackBuffer[1024];
 LightingConfig lightingConfig;
+
+bool saveLightingConfigToEeprom();
 
 void handleRoot() {
   server.send(200, "text/html", INDEX_HTML);
@@ -62,16 +66,6 @@ void handleGetConfig() {
 }
 
 void handlePutConfig() {
-  // char buf[2048];
-  // size_t len = client->read((uint8_t*)buf, sizeof(buf));
-  // if (len > 0) {
-  //   Serial.printf("(<%d> chars)", (int)len);
-  //   Serial.write(buf, len);
-  // }
-  
-  // server.arg();
-  // lightingConfig.fromJson(...);
-  // configNptTime(lightingConfig.timezone.c_str(), NULL);
   String payload = server.arg("plain");
 
   Serial.print("GOT CONFIG UPDATE ");
@@ -88,15 +82,25 @@ void handlePutConfig() {
     return;
   }
   LightingConfig newConfig;
-  FromJsonResult result = newConfig.fromJson(doc);
+  StatusOrError result = newConfig.fromJson(doc);
   if (result.ok) {
     lightingConfig = newConfig;
     doc = lightingConfig.toJson();
     doc["ok"] = true;
+    if (eeprom.isConnected()) {
+      if (!saveLightingConfigToEeprom()) {
+        doc["error"] = "WARN: Failed to write config to EEPROM, config changes will not persist through resets.";
+      } else {
+        doc["error"] = "OK: Written to EEPROM.";
+      }
+    } else {
+      doc["error"] = "WARN: EEPROM not connected, config changes will not persist through resets.";
+    }
     String buf;
     serializeJson(doc, buf);
     server.send(200, F("application/json"), buf);
-    Serial.println("> config update OK");
+    Serial.print("> config update ");
+    Serial.println(doc["error"].as<char*>());
   } else {
     char sz[128];
     sprintf(sz, "{\"ok\": false, \"error\":\"%s\"}", result.error.c_str());
@@ -166,6 +170,68 @@ void tick() {
   obdDumpBuffer(&obd, NULL);
 }
 
+void defaultLightingConfig() {
+  Serial.println(F("Loading default lighting config"));
+  lightingConfig = LightingConfig();
+  lightingConfig.addScheduleEntry(450, 2700, 0);
+  lightingConfig.addScheduleEntry(480, 3500, 80);
+  lightingConfig.addScheduleEntry(720, 5800, 100);
+  lightingConfig.addScheduleEntry(780, 5800, 100);
+  lightingConfig.addScheduleEntry(1020, 4800, 90);
+  lightingConfig.addScheduleEntry(1140, 4800, 70);
+  lightingConfig.addScheduleEntry(1170, 2700, 0);
+  lightingConfig.channelConfigA.maxBrightness = 67;
+  lightingConfig.channelConfigB.maxBrightness = 33;
+  serializeJson(lightingConfig.toJson(), Serial);
+}
+
+void loadLightingConfigFromEeprom() {
+  Serial.println(F("Loading lighting config from EEPROM"));
+  LightingConfigEepromHeader header;
+  eeprom.readBlock(0, (uint8_t *) &header, sizeof(header));
+  StatusOrError soe = LightingConfig::validateHeader(header);
+  if (!soe.ok) {
+    Serial.print(F("Failed to load config from EEPROM - "));
+    Serial.println(soe.error.c_str());
+    defaultLightingConfig();
+    return;
+  }
+  byte data[header.size];
+  eeprom.readBlock(sizeof(header), data, header.size);
+  StatusOrError soe2 = lightingConfig.deserialize(header, data);
+  if (soe2.ok) {
+    Serial.printf("Deserialized raw size %d bytes %s\n", header.size, soe2.error.c_str());
+    serializeJson(lightingConfig.toJson(), Serial);
+  } else {
+    Serial.printf("Deserialize FAILED - %s\n", soe2.error.c_str());
+  }
+}
+
+bool saveLightingConfigToEeprom() {
+  const auto header = lightingConfig.calcEepromDataHeader();
+  byte buff[header.size];
+  uint16_t crc(0);
+  int wroteBytes = lightingConfig.serialize(buff, crc);
+  if (wroteBytes == header.size) {
+    Serial.printf("Serialize OK - seralized config into %d bytes with crc 0x%04X\n", header.size, crc);
+    if (eeprom.writeBlock(0, (uint8_t *) &header, sizeof(header))) {
+      return false;
+    }
+    if (eeprom.writeBlock(sizeof(header), buff, header.size)) {
+      return false;
+    }
+
+    // Serial.println("Serialize OK - echoing deserialized version");
+    // LightingConfig lc2;
+    // lc2.deserialize(header, buff);
+    // serializeJson(lc2.toJson(), Serial);
+  } else {
+    Serial.printf("Serialize ERROR expected %d bytes, wrote %d bytes", header.size, wroteBytes);
+    return false;
+  }
+  return true;
+}
+
 void setup(void) {
   pinMode(LED_BUILTIN, OUTPUT);  // This LED is on/off inverted
   pinMode(LED_A1, OUTPUT);
@@ -179,27 +245,36 @@ void setup(void) {
   analogWrite(LED_B1, 0);  // [0..1024)
   analogWrite(LED_B2, 0);  // [0..1024)
   
-  lightingConfig.addScheduleEntry(450, 2700, 0);
-  lightingConfig.addScheduleEntry(480, 3500, 80);
-  lightingConfig.addScheduleEntry(720, 5800, 100);
-  lightingConfig.addScheduleEntry(780, 5800, 100);
-  lightingConfig.addScheduleEntry(1020, 4800, 90);
-  lightingConfig.addScheduleEntry(1140, 4800, 70);
-  lightingConfig.addScheduleEntry(1170, 2700, 0);
-  lightingConfig.channelConfigB.maxBrightness = 35;
-
-  
   Serial.begin(115200);
   // while (!Serial) delay(20);
   delay(500);
+  Serial.print("\n\n");
   
-  Serial.println();
-  Serial.println("LIGHTING CONFIG");
-  serializeJson(lightingConfig.toJson(), Serial);
-  Serial.println();  
+  eeprom.begin();
+  if (eeprom.isConnected()) {
+    Serial.println(F("EEPROM connected"));
+    loadLightingConfigFromEeprom();
+  } else {
+    Serial.println(F("WARN: Can't find EEPROM"));
+    defaultLightingConfig();
+  }
+
+
+  // const auto header = lightingConfig.calcEepromDataHeader();
+  // Serial.printf("serialized config size: %d\n", header.size);
+  // byte buff[header.size];
+  // int wroteBytes = lightingConfig.serialize(buff);
+  // if (wroteBytes == header.size) {
+  //   Serial.println("Serialize OK - echoing deserialized version");
+  //   LightingConfig lc2;
+  //   lc2.deserialize(header, buff);
+  //   serializeJson(lc2.toJson(), Serial);
+  // } else {
+  //   Serial.printf("Serialize ERROR expected %d bytes, wrote %d bytes", header.size, wroteBytes);
+  // }
 
   // init display
-  obdI2CInit(&obd, OLED_128x64, -1, 0, 0, 1, -1, -1, -1, 400000L);  // probably can go to 800kHz
+  obdI2CInit(&obd, OLED_128x64, -1, 0, 0, 1, -1, -1, -1, 400000L);
   // clear the display buffer and dispaly
   memset(obdBackBuffer, 0x00, sizeof(obdBackBuffer));
   obdSetBackBuffer(&obd, obdBackBuffer);

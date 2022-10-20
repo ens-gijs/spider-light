@@ -434,7 +434,7 @@ class SpiderLightConfig {
   
   toJson() {
     return {
-      time_zone: this.timezone,
+      timezone: this.timezone,
       // max_lum_at_color_temp: clamp(parseInt(this.$maxLumAtColorTemp.value, 10), 2700, 6500),
       channel_a: this.channelA.toJson(),
       channel_b: this.channelB.toJson(),

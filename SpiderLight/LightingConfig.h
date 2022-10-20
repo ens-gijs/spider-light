@@ -6,17 +6,24 @@
 #include "ArduinoJson.h"
 
 typedef struct {
-  int currentMin;
-  float pinA1;
-  float pinA2;
-  float pinB1;
-  float pinB2;
+  /** minutes since midnight */
+  const int currentMin;
+  // pin's are in range [0..1]
+  const float pinA1;
+  const float pinA2;
+  const float pinB1;
+  const float pinB2;
 } ChannelOutput;
 
 typedef struct {
-  bool ok;
-  std::string error;
-} FromJsonResult;
+  const bool ok;
+  const std::string error;
+} StatusOrError;
+
+typedef struct {
+  uint16_t version;
+  uint16_t size;
+} LightingConfigEepromHeader;
 
 class ScheduleEntry {
 public:
@@ -24,9 +31,9 @@ public:
   int time;
   int colorTemp;
   /** percent [0..100] */
-  float brightness;
+  int8_t brightness;
 
-  ScheduleEntry(int time, int colorTemp, float brightness):
+  ScheduleEntry(int time, int colorTemp, int8_t brightness):
     time(time),
     colorTemp(colorTemp),
     brightness(brightness) {}
@@ -37,7 +44,7 @@ public:
   bool enabled;
   bool swapWarmCoolSignals;
   /** percent [0..100] */
-  float maxBrightness;
+  int8_t maxBrightness;
   int warmTemp;
   int coolTemp;
 
@@ -58,10 +65,18 @@ public:
   ChannelConfig channelConfigB;
   std::vector<ScheduleEntry> schedule;
 
+  static StatusOrError validateHeader(const LightingConfigEepromHeader& header);
+  LightingConfigEepromHeader calcEepromDataHeader();
+  /** returns size written to buf */
+  int serialize(byte* buff, uint16_t& crcOut);
+  StatusOrError deserialize(const LightingConfigEepromHeader& header, byte* data);
+  
   LightingConfig(): timezone("EST5EDT") {}
-  void addScheduleEntry(int time, int colorTemp, float brightness);
+  void addScheduleEntry(int time, int colorTemp, int8_t brightness);
   ChannelOutput calcOutputs(const tm* now);
   DynamicJsonDocument toJson();
-  FromJsonResult fromJson(DynamicJsonDocument& obj);
+  StatusOrError fromJson(DynamicJsonDocument& obj);
+private:
+  StatusOrError deserializeV1(const LightingConfigEepromHeader& header, byte* data);
 };
 #endif
