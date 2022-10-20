@@ -4,7 +4,7 @@ An ESP8266 based lighting control for my jumping spiders.
 **PROJECT IS IN EARLY DEVELOPMENT**
 
 Current Features:
-* Web interface to configure 2-channel lighting schedule for controlling brightness & color temperature throughout the day by mixing "tunable white" LED strips.
+* Web interface (served on http://spood.local) to configure 2-channel lighting schedule for controlling brightness & color temperature throughout the day by mixing "tunable white" LED strips.
 * Automatically synchronizes real time clock (RTC) with NTP (network time protocol) servers.
 * Stores/loads configuration to/from EEPROM if connected
 * Work in progress OLED display (currently displayed time, day of week, wifi strength, and debugging information)
@@ -26,6 +26,7 @@ Current Features:
 ## Additional BOM Items
 * [N-ch MOSFET 2N7002WT1G](https://www.mouser.com/ProductDetail/onsemi/2N7002WT1G)
   * *Any small signal N-ch MOSFET with a Vgs-th between 1 & 2V with Vds >= 40V should work fine, but don't pick one with a Vgs-th below 1V.*
+* An I2C EEPROM (at least 128 byte capacity - `24LC...` or compatible) - optional to store configs through resets
 * 10k resistors (pull-down)
 * 1.2k resistors (gate drive)
 * Custom PCB *(future item)*
